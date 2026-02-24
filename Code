@@ -1,0 +1,139 @@
+#define ENABLE_DEBUG
+#define SINRICPRO_NOSSL
+
+#include <WiFi.h>
+#include <ESP32Servo.h>
+#include <SinricPro.h>
+#include <SinricProSwitch.h>
+
+#define WIFI_SSID "wifi ssid"
+#define WIFI_PASS "wifi password"
+
+#define APP_KEY "app key"
+#define APP_SECRET "app secret"
+#define DEVICE_ID "device id"
+
+#define SERVO_POWER_PIN 23   // MOSFET gate control
+
+Servo servoOff;
+Servo servoOn;
+
+int center = 90;
+
+int currentAngle = 90;
+int targetAngle = 90;
+
+bool moving = false;
+bool useOffServo = true;
+bool returning = false;
+
+unsigned long lastMoveTime = 0;
+const int moveInterval = 8;
+
+
+void startPress(bool offCommand) {
+
+  // Turn servo power ON
+  digitalWrite(SERVO_POWER_PIN, HIGH);
+  delay(250);
+
+  useOffServo = offCommand;
+  currentAngle = center;
+
+  if (offCommand) {
+    targetAngle = 0;
+  } else {
+    targetAngle = 180;
+  }
+
+  moving = true;
+  returning = false;
+}
+
+
+bool onPowerState(const String &deviceId, bool &state) {
+
+  if (state) {
+    startPress(false);
+  } else {
+    startPress(true);
+  }
+
+  return true;
+}
+
+
+void setupWiFi() {
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(200);
+  }
+}
+
+void setupSinricPro() {
+
+  SinricProSwitch &mySwitch = SinricPro[DEVICE_ID];
+  mySwitch.onPowerState(onPowerState);
+
+  SinricPro.begin(APP_KEY, APP_SECRET);
+  SinricPro.restoreDeviceStates(true);
+}
+
+void setup() {
+
+  Serial.begin(115200);
+
+  pinMode(SERVO_POWER_PIN, OUTPUT);
+  digitalWrite(SERVO_POWER_PIN, LOW);
+
+  servoOff.setPeriodHertz(50);
+  servoOn.setPeriodHertz(50);
+
+  servoOff.attach(18, 500, 2400);
+  servoOn.attach(19, 500, 2400);
+
+  servoOff.write(center);
+  servoOn.write(center);
+
+  setupWiFi();
+  setupSinricPro();
+}
+
+
+void handleServoMotion() {
+
+  if (!moving) return;
+
+  if (millis() - lastMoveTime >= moveInterval) {
+
+    lastMoveTime = millis();
+
+    if (!returning) {
+
+      if (currentAngle < targetAngle) currentAngle++;
+      else if (currentAngle > targetAngle) currentAngle--;
+      else returning = true;
+
+    } else {
+
+      if (currentAngle < center) currentAngle++;
+      else if (currentAngle > center) currentAngle--;
+      else {
+        moving = false;
+
+        // Turn servo power OFF after motion finishes
+        digitalWrite(SERVO_POWER_PIN, LOW);
+      }
+    }
+
+    if (useOffServo)
+      servoOff.write(currentAngle);
+    else
+      servoOn.write(currentAngle);
+  }
+}
+
+void loop() {
+  SinricPro.handle();
+  handleServoMotion();
+}
