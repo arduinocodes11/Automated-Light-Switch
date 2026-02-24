@@ -1,0 +1,75 @@
+(External Battery Pack – Servo Power)
+
+Battery pack positive (+) → switch terminal 1
+
+Switch terminal 2 → breadboard red (+) rail
+
+Battery pack negative (–) → breadboard blue (–) rail
+
+(ESP32 Ground Reference – VERY IMPORTANT)
+
+Wire going from ESP32 GND → breadboard blue (–) rail
+
+(This allows servo signals to work correctly)
+
+(Servos – Power)
+
+Servo OFF red wire → breadboard red (+) rail
+
+Servo ON red wire → breadboard red (+) rail
+
+(Servos – Signal to ESP32)
+
+Servo OFF signal wire → ESP32 GPIO 18
+
+Servo ON signal wire → ESP32 GPIO 19
+
+(MOSFET – IRLZ44N Low-Side Switching)
+
+Servo OFF ground wire → breadboard hole B15
+
+Servo ON ground wire → breadboard hole C15
+
+Wire going from breadboard hole D15 → MOSFET Drain (middle leg)
+
+MOSFET Source (right leg) → breadboard blue (–) rail
+
+(MOSFET Gate Control)
+
+MOSFET Gate (left leg) → breadboard hole B20
+
+Wire going from ESP32 GPIO 23 → breadboard hole B20
+
+10k resistor leg → breadboard hole B20
+
+Other leg of 10k resistor → breadboard blue (–) rail
+
+(Pulldown resistor prevents random servo activation during boot)
+
+(Servo Power Stabilization – Strongly Recommended)
+
+Electrolytic capacitor positive (+) leg → breadboard red (+) rail
+
+Electrolytic capacitor negative (–) leg → breadboard blue (–) rail
+
+(470–1000 µF recommended for two servos)
+
+⭐ Important physical placement notes
+
+MOSFET legs must be in different rows
+
+Keep Drain in the same row as both servo grounds
+
+Do not place MOSFET across the breadboard center gap incorrectly
+
+The MOSFET metal tab is connected to Drain — avoid touching ground
+
+⭐ What should happen now
+
+Battery switch ON → battery available but servos OFF
+
+ESP32 command → GPIO23 HIGH → MOSFET connects ground
+
+Servos move
+
+Motion ends → MOSFET OFF → battery saved
